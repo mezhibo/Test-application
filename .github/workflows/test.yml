@@ -45,7 +45,7 @@ jobs:
           yc managed-kubernetes cluster get-credentials --id $KUBERNETES_CLUSTER_ID --external
           kubectl get nodes
 
-      # Шаг 6: Деплой приложения
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl apply -f k8s/deployment.yaml
+          kubectl get nodes
+          kubectl get pods --all-namespaces
+          kubectl create deployment nginx --image=mezhibo/nginx:1.0.0
+          kubectl rollout status deployment.v1.apps/nginx

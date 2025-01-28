@@ -1,4 +1,5 @@
 name: Сборка и Развертывание
+
 on:
   push:
     branches:
@@ -60,21 +61,22 @@ jobs:
       - name: Установка Yandex CLI
         run: |
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+          echo 'export PATH=$HOME/yandex-cloud/bin:$PATH' >> $GITHUB_ENV
+          source $GITHUB_ENV
+          yc version
 
-      - name: Настройка Yandex CLI через сервисный аккаунт
+      - name: Настройка Yandex CLI
         env:
-          SA_KEY_JSON: ${{ secrets.YC_SA_KEY }}
+          YC_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.YC_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
-          echo "${SA_KEY_JSON}" > /tmp/key.json
-          yc config set service-account-key /tmp/key.json
+          echo "${{ secrets.YC_SERVICE_ACCOUNT_KEY_JSON }}" > key.json
+          yc config set service-account-key key.json
           yc config set cloud-id ${{ secrets.YC_CLOUD_ID }}
           yc config set folder-id ${{ secrets.YC_FOLDER_ID }}
-          yc config set compute-default-zone ru-central1-a
 
-      - name: Получение kubeconfig для подключения к кластеру по ID
+      - name: Получение Kubernetes-кредитов (по ID кластера)
         run: |
           yc managed-kubernetes cluster get-credentials ${{ secrets.YC_CLUSTER_ID }} --external --force
-          kubectl config view
           kubectl get nodes
 
       - name: Установка kubectl
@@ -84,8 +86,10 @@ jobs:
           sudo mv ./kubectl /usr/local/bin/kubectl
           kubectl version --client
 
-      - name: Деплой приложения в кластер Kubernetes
+      - name: Развертывание и деплой в Kubernetes
+        env:
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          VERSION: ${{ env.VERSION }}
         run: |
-          kubectl create deployment nginx --image=${{ env.IMAGE_TAG }}:${{ env.VERSION }} --dry-run=client -o yaml > deployment.yml
-          kubectl apply -f deployment.yml
+          kubectl create deployment nginx --image=${{ env.IMAGE_TAG }}:${{ env.VERSION }} || kubectl set image deployment/nginx nginx=${{ env.IMAGE_TAG }}:${{ env.VERSION }}
           kubectl rollout status deployment.v1.apps/nginx

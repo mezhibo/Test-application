@@ -6,7 +6,9 @@ on:
   create:
     tags:
       - '*'
-
+      - name: Create tag v1.0.0
+        run: |
+          git tag v1.0.0
 env:
   IMAGE_TAG: mezhibo/nginx
 
